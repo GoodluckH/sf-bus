@@ -1,12 +1,20 @@
-import { MapContainer, Polyline, TileLayer } from "react-leaflet";
-import AllRoutes from "public/sf/routes.json";
-import { useState, useEffect } from "react";
-import { Path, Point, RouteData } from "~/types/routes";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
+import { useState, useEffect, useContext } from "react";
 import { GeoJsonResponse } from "~/types/geo";
-import { useFetcher } from "@remix-run/react";
+
+import { ROUTES } from "~/assets/sf/routes";
+import { TransitContext } from "~/context/context";
+import { Checkbox } from "@nextui-org/react";
+import { IconHeartFilled } from "@tabler/icons-react";
 
 const sf_position = {
-  lat: 37.755,
+  lat: 37.765,
   lng: -122.4196,
 };
 
@@ -33,19 +41,27 @@ const fetchRouteData = async (route: string) => {
 const fetchGeoJson = async (route: string) => {
   try {
     const response = await fetch(`/api/geojson?route=${route}`);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const json: any = await response.json();
+    const json: GeoJsonResponse = await response.json();
     return json;
   } catch (error) {
     console.error(`Error fetching route ${route}:`, error);
-    return [];
+    return undefined;
   }
 };
 
 export default function Map() {
+  const {
+    selectedRoutes,
+    setLoadingRoutePaths,
+    selectedRouteData,
+    selectedStop,
+    setSelectedStop,
+  } = useContext(TransitContext);
   const [routePaths, setRoutePaths] = useState<
     {
       coordinates: number[][][];
@@ -53,13 +69,16 @@ export default function Map() {
       textColor: string;
     }[]
   >([]);
-  const fetcher = useFetcher();
 
   useEffect(() => {
     const loadRoutes = async () => {
-      for (const route of AllRoutes) {
-        const geoJson: GeoJsonResponse = await fetchGeoJson(route.id);
-
+      setRoutePaths([]);
+      setLoadingRoutePaths(true);
+      for (const routeId of selectedRoutes) {
+        const route = ROUTES.find((r) => r.id === routeId);
+        if (!route) continue;
+        const geoJson = await fetchGeoJson(route.id);
+        if (!geoJson) continue;
         setRoutePaths((prevPaths) => [
           ...prevPaths,
           {
@@ -69,26 +88,23 @@ export default function Map() {
           },
         ]);
       }
+      setLoadingRoutePaths(false);
     };
 
     loadRoutes();
-  }, [AllRoutes]);
-
+  }, [selectedRoutes]);
   return (
     <MapContainer
       center={sf_position}
-      zoom={12.6}
-      minZoom={12.6}
-      //   maxBounds={[
-      //     [37.765, -122.4196],
-      //     [37.765, -122.4196],
-      //   ]}
+      zoom={12.5}
+      minZoom={12.5}
+      className="w-full h-screen"
     >
       {routePaths &&
         routePaths.map((path, index) => (
           <Polyline
             key={index}
-            pathOptions={{ color: `#${path.color}`, weight: 5, opacity: 0.7 }}
+            pathOptions={{ color: `#${path.color}`, weight: 5, opacity: 1 }}
             positions={path.coordinates.map((coordSection) => {
               return coordSection.map((coord) => ({
                 lng: coord[0],
@@ -97,6 +113,43 @@ export default function Map() {
             })}
           />
         ))}
+
+      {selectedRouteData &&
+        selectedRouteData.stops
+          .filter((s) => {
+            if (!selectedStop) return true;
+            return s.id === selectedStop.id;
+          })
+          .map((stop, id) => (
+            <Marker position={[stop.lat, stop.lon]} key={id}>
+              <Popup>
+                <div className="flex flex-row justify-center items-center">
+                  <Checkbox
+                    size="md"
+                    icon={<IconHeartFilled strokeWidth={5} />}
+                    color="danger"
+                  >
+                    <div className="flex flex-col justify-start items-start">
+                      <div
+                        className="text-sm font-bold"
+                        style={{
+                          color: `#${selectedRouteData.color}`,
+                        }}
+                      >
+                        To:{" "}
+                        {
+                          selectedRouteData.directions.find((d) =>
+                            d.stops.includes(stop.id)
+                          )?.name
+                        }
+                      </div>
+                      <div className="font-black">{stop.name}</div>
+                    </div>
+                  </Checkbox>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
