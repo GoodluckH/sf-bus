@@ -60,7 +60,8 @@ export default function Map() {
     setLoadingRoutePaths,
     selectedRouteData,
     selectedStop,
-    setSelectedStop,
+    pinnedStops,
+    setPinnedStops,
   } = useContext(TransitContext);
   const [routePaths, setRoutePaths] = useState<
     {
@@ -128,6 +129,31 @@ export default function Map() {
                     size="md"
                     icon={<IconHeartFilled strokeWidth={5} />}
                     color="danger"
+                    onChange={() => {
+                      const direction = selectedRouteData?.directions.find(
+                        (d) => d.stops.includes(stop.id)
+                      )?.shortName;
+                      const newPinnedStop = {
+                        id: stop.id,
+                        name: stop.name,
+                        route: selectedRouteData?.id,
+                        direction,
+                        isInitDestinationsLoaded: false,
+                      };
+
+                      if (
+                        pinnedStops.find((s: any) => s.id === selectedStop?.id)
+                      ) {
+                        setPinnedStops([
+                          ...pinnedStops.filter(
+                            (s: any) => s.id !== selectedStop?.id
+                          ),
+                        ]);
+                      } else {
+                        setPinnedStops([...pinnedStops, newPinnedStop]);
+                        // fetchRouteData();
+                      }
+                    }}
                   >
                     <div className="flex flex-col justify-start items-start">
                       <div

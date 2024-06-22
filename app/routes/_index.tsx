@@ -30,10 +30,10 @@ export const links: LinksFunction = () => [
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Remix App" },
+    { title: "SF Muni Transits" },
     {
       name: "description",
-      content: "Welcome to Remix! Using Vite and Cloudflare!",
+      content: "Real-time SF Muni transits tracking",
     },
   ];
 };
@@ -315,23 +315,28 @@ const PinnedStopPredictionCard = ({ stop }: { stop: PinnedStop }) => {
   const [hovered, setHovered] = useState(false);
   return (
     <motion.div
-      className="flex flex-col justify-start items-start rounded-3xl border p-2 my-2"
+      className="flex flex-col justify-start items-start rounded-3xl border p-5 my-2"
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >
-      <div className="flex flex-row items-center">
-        <div className="text-sm font-bold">{stop.name}</div>
-        <div className="ml-3 text-xs text-gray-500">{stop.route}</div>
-        <Button
-          isIconOnly
-          color="danger"
-          className="w-2"
-          onClick={() => {
-            setPinnedStops([...pinnedStops.filter((s) => s.id !== stop.id)]);
-          }}
-        >
-          <IconTrash />
-        </Button>
+      <div className="flex flex-row items-center justify-between w-full ">
+        <div className="flex flex-row items-center">
+          <div className="text-sm font-bold">{stop.name}</div>
+          <div className="ml-3 text-xs text-gray-500">{stop.route}</div>
+        </div>
+        {hovered && (
+          <Button
+            isIconOnly
+            color="danger"
+            // size="sm"
+            className="w-2 h-5"
+            onClick={() => {
+              setPinnedStops([...pinnedStops.filter((s) => s.id !== stop.id)]);
+            }}
+          >
+            <IconTrash className="w-4 h-4" />
+          </Button>
+        )}
       </div>
 
       {!stop.initLoaded && <Spinner />}
@@ -344,7 +349,7 @@ const PinnedStopPredictionCard = ({ stop }: { stop: PinnedStop }) => {
             className="flex flex-col justify-start items-start relative"
           >
             <div className="text-xs font-bold">To {destination.name}</div>
-            <div className="flex flex-row items-center gap-1">
+            <div className="flex flex-row items-center gap-1 mt-3">
               {destination.predictions.map((prediction, id) => {
                 const minsLeft = Math.round(
                   (parseInt(prediction.arrival) * 1000 - Date.now()) / 1000 / 60
